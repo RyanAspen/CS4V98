@@ -1,0 +1,1 @@
+# This is the main script to run a simulation
