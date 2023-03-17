@@ -14,4 +14,11 @@ get a visible object's visual appearance, etc.
 class Camera:
 
     def __init__(self):
-        pass
+        self.id = 0
+        self.pos = self.x, self.y = (0,0)
+        self.vision_range = None
+        self.handshake = None # tuple of pos and 1d view 
+        
+        
+
+    

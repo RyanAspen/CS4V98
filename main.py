@@ -10,3 +10,36 @@
     c) For each neighbor of c as c2,
         i) If the object is in c2's vision range, send a handshake to c2
 """
+
+from environment import Environment
+import utils
+
+
+environment = Environment()
+utils.initialize_vision_ranges(environment)
+cameras, objects, tracked_object = environment.cameras, environment.objects, environment.tracked_object
+
+# 1) Initialize a graph of cameras
+camera_neighbor_ids = dict()
+for camera in cameras:
+    camera_id = camera.id
+    for camera_id_2 in camera_neighbor_ids.keys:
+        pass
+
+# 2) c = camera that can see the tracked object
+c = None
+for camera in cameras:
+    if utils.can_camera_see_object(camera, tracked_object):
+        c = camera
+        break
+
+while True:
+    if not utils.can_camera_see_object(c, tracked_object):
+        pass
+    tracked_pos = tracked_object.pos
+    tracked_visual = utils.get_object_appearance(c, tracked_object)
+    # Estimate velocity
+    neighbors = camera_neighbor_ids[c.id]
+    for neighbor in neighbors:
+        if utils.can_camera_see_object(neighbor, tracked_object):
+            utils.send_handshake(c, neighbor)
