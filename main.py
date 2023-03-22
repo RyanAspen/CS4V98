@@ -14,17 +14,10 @@
 from environment import Environment
 import utils
 
-
-environment = Environment()
+file_name = None
+environment = Environment(file_name)
 utils.initialize_vision_ranges(environment)
 cameras, objects, tracked_object = environment.cameras, environment.objects, environment.tracked_object
-
-# 1) Initialize a graph of cameras
-camera_neighbor_ids = dict()
-for camera in cameras:
-    camera_id = camera.id
-    for camera_id_2 in camera_neighbor_ids.keys:
-        pass
 
 # 2) c = camera that can see the tracked object
 c = None
@@ -38,8 +31,8 @@ while True:
         pass
     tracked_pos = tracked_object.pos
     tracked_visual = utils.get_object_appearance(c, tracked_object)
-    # Estimate velocity
-    neighbors = camera_neighbor_ids[c.id]
-    for neighbor in neighbors:
-        if utils.can_camera_see_object(neighbor, tracked_object):
-            utils.send_handshake(c, neighbor)
+    next_pos = utils.get_next_position(tracked_pos)
+    for camera in cameras:
+        if c.id != camera.id and utils.can_camera_see_camera(c, camera):
+            if utils.can_camera_see_object(camera, tracked_object):
+                utils.send_handshake(c, camera)

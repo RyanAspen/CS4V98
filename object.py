@@ -18,26 +18,31 @@ class Object:
         self.pos = self.x, self.y = (0,0)
         self.rotation = 0
         self.size = self.width, self.height = (5,5)
-        self.visual = np.zeros(self.size)
-        self.path = None
-        self.rotations = None
+        self.initial_visual = np.zeros(self.size)
+        self.visual = self.initial_visual
+        self.initial_path = list()
+        self.path = list() # List of tuples (newX, newY, time, orientation)
+        self.time_until_change = 0
 
     def rotate(self, degrees): # Must be divisible by 90
         if degrees == 0:
-            return self.visual
+            return self.initial_visual
         elif degrees == 90:
-            pass
+            return np.rot90(self.initial_visual, 1)   
         elif degrees == 180:
-            pass
+            return np.rot90(self.initial_visual, 2)   
         elif degrees == 270:
-            pass
+            return np.rot90(self.initial_visual, 3)   
         else:
             return None
 
     def update(self):
-        self.pos = self.path[0]
-        self.rotation = self.rotations[0]
-        self.path = self.path[1:]
-        self.rotations = self.rotations[1:]
+        if len(self.path) > 0 and self.time_until_change == 0:
+            self.x, self.y, self.time_until_change, self.rotation = self.path[0]
+            self.visual = self.rotate(self.rotation)
+            self.path = self.path[1:]
+        elif self.time_until_change > 0:
+            self.time_until_change -= 1
+        
 
 
