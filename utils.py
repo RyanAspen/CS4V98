@@ -7,74 +7,67 @@ Utility methods used by other objects.
 import numpy as np
 from queue import Queue
 
-
-# Positions should go from most recent to least recent.
-def estimate_next_position(positions):
-    p = len(positions)
-    curr_pos = cx, cy = positions[0]
-    #next
-
 def is_pos_visible_from_pos(start, end, environment):
-        """
-          Draw a line between start and end
-          For every position that that line passes through, check if it is a wall. If it is, return false.
-          Return true.
-        """
+    """
+        Draw a line between start and end
+        For every position that that line passes through, check if it is a wall. If it is, return false.
+        Return true.
+    """
 
-        # Using Bresenham's Line Algorithm
-        x0, y0 = start
-        x1, y1 = end
+    # Using Bresenham's Line Algorithm
+    x0, y0 = start
+    x1, y1 = end
 
-        def plotLineLow(x0, y0, x1, y1):
-            dx = x1 - x0
-            dy = y1 - y0
-            yi = 1
-            if dy < 0:
-                yi = -1
-                dy = -dy
-            D = (2 * dy) - dx
-            y = y0
+    def plotLineLow(x0, y0, x1, y1):
+        dx = x1 - x0
+        dy = y1 - y0
+        yi = 1
+        if dy < 0:
+            yi = -1
+            dy = -dy
+        D = (2 * dy) - dx
+        y = y0
 
-            for x in range(x0, x1 + 1):
-                if environment.map[x, y] > 0:
-                    return False
-                if D > 0:
-                    y += yi
-                    D += 2 * (dy - dx)
-                else:
-                    D += 2*dy
-            return True
-
-        def plotLineHigh(x0, y0, x1, y1):
-            dx = x1 - x0
-            dy = y1 - y0
-            yi = 1
-            if dx < 0:
-                xi = -1
-                dx = -dx
-            D = (2 * dx) - dy
-            x = x0
-
-            for y in range(y0, y1 + 1):
-                if environment.map[x, y] > 0:
-                    return False
-                if D > 0:
-                    x += xi
-                    D += 2 * (dx - dy)
-                else:
-                    D += 2*dx
-            return True
-
-        if abs(y1 - y0) < abs(x1 - x0):
-            if x0 > x1:
-                return plotLineLow(x1, y1, x0, y0)
+        for x in range(x0, x1 + 1):
+            if environment.map[x, y] > 0:
+                return False
+            if D > 0:
+                y += yi
+                D += 2 * (dy - dx)
             else:
-                return plotLineLow(x0, y0, x1, y1)
+                D += 2*dy
+        return True
+
+    def plotLineHigh(x0, y0, x1, y1):
+        dx = x1 - x0
+        dy = y1 - y0
+        yi = 1
+        if dx < 0:
+            xi = -1
+            dx = -dx
+        D = (2 * dx) - dy
+        x = x0
+
+        for y in range(y0, y1 + 1):
+            if environment.map[x, y] > 0:
+                return False
+            if D > 0:
+                x += xi
+                D += 2 * (dx - dy)
+            else:
+                D += 2*dx
+        return True
+
+    if abs(y1 - y0) < abs(x1 - x0):
+        if x0 > x1:
+            return plotLineLow(x1, y1, x0, y0)
         else:
-            if y0 > y1:
-                return plotLineHigh(x1, y1, x0, y0)
-            else:
-                return plotLineHigh(x0, y0, x1, y1)
+            return plotLineLow(x0, y0, x1, y1)
+    else:
+        if y0 > y1:
+            return plotLineHigh(x1, y1, x0, y0)
+        else:
+            return plotLineHigh(x0, y0, x1, y1)
 
 def initialize_vision_ranges(environment):
 
@@ -133,5 +126,35 @@ def get_object_appearance(camera, object):
 def can_camera_see_object(camera, object):
     return not np.all((get_object_appearance(camera, object) == 0))
 
-def send_handshake(sender, receiver):
+def send_handshake(sender, receiver, object):
+    appearance = get_object_appearance(sender, object)
+    pos = object.pos
+    receiver.handshake = pos, appearance
+
+def reset_handshakes(cameras):
+    for camera in cameras:
+        camera.handshake = None
+
+def find_object_with_handshake(camera, objects):
+    if camera.handshake is not None:
+        previous_pos, previous_appearance = camera.handshake
+        best_object = get_best_object_match(camera, objects, previous_pos, previous_appearance)
+        return best_object
+    return None
+
+def get_object_match(camera, object, target_pos, target_appearance):
+    # Use a function to calculate the match between the object and the camera
+    pos_diff = (target_pos[0] - object.pos[0])**2 + (target_pos[1] - object.pos[1])**2
+    camera_appearance = get_object_appearance(camera, object)
+    
     pass
+
+def get_best_object_match(camera, objects, target_pos, target_appearance):
+    best_object = None
+    best_match = -1
+    for object in objects:
+        match = get_object_match(camera, object, target_pos, target_appearance)
+        if match > best_match:
+            best_object = object
+            best_match = match
+    return best_object

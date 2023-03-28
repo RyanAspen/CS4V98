@@ -12,6 +12,7 @@ as well as some loadEnvironment function which loads in a file used to initializ
 
 import numpy as np
 import os
+import pygame
 
 class Environment:
 
@@ -26,7 +27,9 @@ class Environment:
         else:
             # Load from file (should always be this case)
             self.load_from_file(file_name)
+        
 
+    # TODO: Still needs path information
     def save_to_file(self, file_name):
         map_file_path = "maps/" + file_name
         if os.path.exists(map_file_path):
@@ -57,6 +60,7 @@ class Environment:
             f.write(str(camera.x) + " " + str(camera.y) + "\n")
         f.close()
 
+    #TODO
     def load_from_file(self, file_name):
         map_file_path = "maps/" + file_name
         f = open(map_file_path, "r")
@@ -75,13 +79,28 @@ class Environment:
         objects_length = int(content[i])
         i += 1
 
-
-
-
         for line in f:
             split = line.split()
             if i == 0:
                 self.width = int(split[0])
                 self.height = int(split[1])
             
+    def update(self, screen):
+        self.window.fill((255, 255, 255))
+        for y in range(self.map.shape[1]):
+            for x in range(self.map.shape[0]):
+                if self.visual[x,y] > 0:
+                    pygame.draw.rect(
+                        screen,
+                        (0, 0, 0),
+                        (x*5, y*5, 5, 5)
+                    )
+        for camera in self.cameras:
+            pygame.draw.circle(screen, 
+                (0, 255, 0), 
+                (camera.x, camera.y),
+                5
+            )
+        for object in self.objects:
+            object.update(screen)
         

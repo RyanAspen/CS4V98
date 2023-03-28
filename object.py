@@ -10,6 +10,7 @@ The object should have functions to move and rotate.
 """
 
 import numpy as np
+import pygame
 
 class Object:
 
@@ -36,13 +37,21 @@ class Object:
         else:
             return None
 
-    def update(self):
+    def update(self, screen):
         if len(self.path) > 0 and self.time_until_change == 0:
             self.x, self.y, self.time_until_change, self.rotation = self.path[0]
             self.visual = self.rotate(self.rotation)
             self.path = self.path[1:]
         elif self.time_until_change > 0:
             self.time_until_change -= 1
+        for y in range(self.visual.shape[1]):
+            for x in range(self.visual.shape[0]):
+                if self.visual[x,y] > 0:
+                    pygame.draw.rect(
+                        screen,
+                        self.visual[x,y] * (20, 20, 20),
+                        (self.x + x*5, self.y + y*5, 5, 5)
+                    )
         
 
 
