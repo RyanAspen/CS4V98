@@ -1,0 +1,7 @@
+MAP_NAME = "simple_test.txt"
+
+POS_CONST = 1.0
+APPEARANCE_CONST = 0.1
+SIZE_CONST = 4.0
+
+SCALE = 50

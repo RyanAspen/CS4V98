@@ -6,6 +6,8 @@ Utility methods used by other objects.
 
 import numpy as np
 from queue import Queue
+import constants
+import copy
 
 def is_pos_visible_from_pos(start, end, environment):
     """
@@ -29,7 +31,7 @@ def is_pos_visible_from_pos(start, end, environment):
         y = y0
 
         for x in range(x0, x1 + 1):
-            if environment.map[x, y] > 0:
+            if environment.map[y, x] > 0:
                 return False
             if D > 0:
                 y += yi
@@ -41,7 +43,7 @@ def is_pos_visible_from_pos(start, end, environment):
     def plotLineHigh(x0, y0, x1, y1):
         dx = x1 - x0
         dy = y1 - y0
-        yi = 1
+        xi = 1
         if dx < 0:
             xi = -1
             dx = -dx
@@ -49,7 +51,7 @@ def is_pos_visible_from_pos(start, end, environment):
         x = x0
 
         for y in range(y0, y1 + 1):
-            if environment.map[x, y] > 0:
+            if environment.map[y, x] > 0:
                 return False
             if D > 0:
                 x += xi
@@ -88,9 +90,10 @@ def initialize_vision_ranges(environment):
         """
         while not position_queue.empty():
             current_position = curr_x, curr_y = position_queue.get()
-            if is_pos_on_map(current_position, environment) and camera.vision_range[curr_x, curr_y] == 0 and environment.map[curr_x, curr_y] == 0:
-                if is_pos_visible_from_pos(start_position, current_position):                    
-                    camera.vision_range[curr_x, curr_y] = 1
+            # Error on next line with (8,0)
+            if is_pos_on_map(current_position, environment) and camera.vision_range[curr_y, curr_x] == 0 and environment.map[curr_y, curr_x] == 0:
+                if is_pos_visible_from_pos(start_position, current_position, environment):                    
+                    camera.vision_range[curr_y, curr_x] = 1
                     position_queue.put((curr_x - 1, curr_y - 1))
                     position_queue.put((curr_x, curr_y - 1))
                     position_queue.put((curr_x + 1, curr_y - 1))
@@ -100,34 +103,34 @@ def initialize_vision_ranges(environment):
                     position_queue.put((curr_x, curr_y + 1))
                     position_queue.put((curr_x + 1, curr_y + 1))
                 else:
-                    camera.vision_range[curr_x, curr_y] = 2
+                    camera.vision_range[curr_y, curr_x] = 2
                 
         
 
 def can_camera_see_position(camera, position):
-    x, y = position
+    x, y = int(position[0]), int(position[1])
     return camera.vision_range[x,y] == 1
 
 def can_camera_see_camera(camera1, camera2):
     c2x, c2y = camera2.pos
     return camera1.vision_range[c2x, c2y] == 1
 
-def get_object_appearance(camera, object):
+def get_object_appearance(camera, object, environment):
     # Return an array representing the appearance of the object except every pixel that isn't visible is overridden with 0
-    cx, cy = camera.pos
-    appearance = object.visual
+    cx, cy = int(object.pos[0]), int(object.pos[1])
+    appearance = copy.deepcopy(object.visual)
     for x in range(cx, cx + object.width):
         for y in range(cy, cy + object.height):
             end = x,y
-            if is_pos_visible_from_pos(camera.pos, end):
-                appearance[x,y] = 0
+            if not is_pos_visible_from_pos(camera.pos, end, environment):
+                appearance[cx - x, cy - y] = 0
     return appearance
 
-def can_camera_see_object(camera, object):
-    return not np.all((get_object_appearance(camera, object) == 0))
+def can_camera_see_object(camera, object, environment):
+    return not np.all((get_object_appearance(camera, object, environment) == 0))
 
-def send_handshake(sender, receiver, object):
-    appearance = get_object_appearance(sender, object)
+def send_handshake(sender, receiver, object, environment):
+    appearance = get_object_appearance(sender, object, environment)
     pos = object.pos
     receiver.handshake = pos, appearance
 
@@ -135,25 +138,68 @@ def reset_handshakes(cameras):
     for camera in cameras:
         camera.handshake = None
 
-def find_object_with_handshake(camera, objects):
+def find_object_with_handshake(camera, objects, environment):
     if camera.handshake is not None:
         previous_pos, previous_appearance = camera.handshake
-        best_object = get_best_object_match(camera, objects, previous_pos, previous_appearance)
+        best_object = get_best_object_match(camera, objects, previous_pos, previous_appearance, environment)
         return best_object
     return None
 
-def get_object_match(camera, object, target_pos, target_appearance):
+def get_size_difference(camera, object1, target_appearance, environment):
+    appearance1 = get_object_appearance(camera, object1, environment)
+    appearance2 = target_appearance
+    
+    # Remove outside zero rows
+    extra_rows = np.sum(~appearance2.any(1))
+    
+    # Remove outside zero columns
+    extra_columns = 0
+    for i in range(appearance1.shape[1]):
+        is_all_zeros = True
+        for j in range(appearance1.shape[0]):
+            if appearance1[j,i] != 0:
+                is_all_zeros = False
+                break
+        if is_all_zeros:
+            extra_columns += 1
+
+    height = appearance1.shape[0] - extra_rows
+    width = appearance1.shape[1] - extra_columns
+    return abs(height - appearance2.shape[0]) + abs(width - appearance2.shape[1])
+
+def get_appearance_difference(camera, object1, target_appearance, environment):
+    appearance1 = get_object_appearance(camera, object1, environment)
+    appearance2 = target_appearance
+    combined_height = max(appearance1.shape[0], appearance2.shape[0])
+    combined_width = max(appearance1.shape[1], appearance2.shape[1])
+
+    def get_pixel(x, y, appearance):
+        if y >= appearance.shape[0] or x >= appearance.shape[1]:
+            return 0
+        return appearance[y][x]
+
+    sum = 0.0
+    for y in range(combined_height):
+        for x in range(combined_width):
+            val1 = get_pixel(x,y, appearance1)
+            val2 = get_pixel(x,y, appearance2)
+            sum += abs(val2 - val1)
+    normalized_sum = sum / (combined_height * combined_width)
+
+    return normalized_sum
+
+def get_object_match(camera, object, target_pos, target_appearance, environment):
     # Use a function to calculate the match between the object and the camera
     pos_diff = (target_pos[0] - object.pos[0])**2 + (target_pos[1] - object.pos[1])**2
-    camera_appearance = get_object_appearance(camera, object)
-    
-    pass
+    appearance_diff = get_appearance_difference(camera, object, target_appearance, environment)
+    size_diff = get_size_difference(camera, object, target_appearance, environment)
+    return pos_diff*constants.POS_CONST + appearance_diff*constants.APPEARANCE_CONST + size_diff*constants.SIZE_CONST
 
-def get_best_object_match(camera, objects, target_pos, target_appearance):
+def get_best_object_match(camera, objects, target_pos, target_appearance, environment):
     best_object = None
     best_match = -1
     for object in objects:
-        match = get_object_match(camera, object, target_pos, target_appearance)
+        match = get_object_match(camera, object, target_pos, target_appearance, environment)
         if match > best_match:
             best_object = object
             best_match = match
