@@ -57,7 +57,7 @@ class Object:
             self.time_until_change -= 1
             self.orientation = orientation
 
-    def update(self, screen):
+    def update(self, screen, is_tracked):
         self.progress_on_path()
         x_offset = int(self.x * constants.SCALE)
         y_offset = int(self.y * constants.SCALE)
@@ -70,6 +70,13 @@ class Object:
                         (20 * temp_visual[x,y], 20 * temp_visual[x,y], 20 * temp_visual[x,y]),
                         (int(x_offset + x * constants.SCALE), int(y_offset + y * constants.SCALE), constants.SCALE, constants.SCALE)
                     )
+        if is_tracked:
+            pygame.draw.rect(
+                screen,
+                (0, 255, 255),
+                (x_offset, y_offset, constants.SCALE * temp_visual.shape[0], constants.SCALE * temp_visual.shape[1]),
+                2
+            )
         
 
 

@@ -137,5 +137,8 @@ class Environment:
                 int(constants.SCALE / 2)
             )
         for i in range(len(self.objects)):
-            self.objects[i].update(screen)
+            if i == 0:
+                self.objects[i].update(screen, True)
+            else:
+                self.objects[i].update(screen, False)
         self.tracked_object = self.objects[0]
