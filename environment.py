@@ -25,7 +25,6 @@ class Environment:
         self.map = np.zeros(self.size)
         self.objects = list()
         self.cameras = list()
-        self.tracked_object = None
         if file_name is not None:
             # Load from file (should always be this case)
             self.load_from_file(file_name)
@@ -99,8 +98,6 @@ class Environment:
             o = Object(objects_processed, initial_visual, initial_path)
             self.objects.append(o)
             objects_processed += 1
-        
-        self.tracked_object = self.objects[0]
 
         cameras_length = int(content[i])
         self.cameras = list()
@@ -110,7 +107,7 @@ class Environment:
             self.cameras.append(Camera(cameras_processed, x,y))
             cameras_processed += 1
             
-    def update(self, screen, tracking_camera_id):
+    def update(self, screen, tracking_camera_id, tracking_object_id):
         screen.fill((255, 255, 255))
         for y in range(self.map.shape[0]):
             for x in range(self.map.shape[1]):
@@ -134,11 +131,12 @@ class Environment:
             pygame.draw.circle(screen, 
                 color, 
                 (int((camera.x + 0.5) * constants.SCALE), int((camera.y + 0.5) * constants.SCALE)),
-                int(constants.SCALE / 2)
+                max(int(constants.SCALE / 2), 3)
             )
         for i in range(len(self.objects)):
             if i == 0:
-                self.objects[i].update(screen, True)
+                self.objects[i].update(screen, True, False)
+            elif i == tracking_object_id:
+                self.objects[i].update(screen, False, True)
             else:
-                self.objects[i].update(screen, False)
-        self.tracked_object = self.objects[0]
+                self.objects[i].update(screen, False, False)

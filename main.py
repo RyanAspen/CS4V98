@@ -33,29 +33,31 @@ clock = pygame.time.Clock()
 
 # 2) c = camera that can see the tracked object
 c = None
+tracked_object_id = 0
 for camera in environment.cameras:
-    if utils.can_camera_see_object(camera, environment.tracked_object, environment):
+    if utils.can_camera_see_object(camera, environment.objects[tracked_object_id], environment):
         c = camera
         break
 
+
 while True:
-    if not utils.can_camera_see_object(c, environment.tracked_object, environment):
+    if not utils.can_camera_see_object(c, environment.objects[tracked_object_id], environment):
         for camera in environment.cameras:
             if camera.handshake is not None:
                 best_match = utils.get_best_object_match(camera, environment.objects, camera.handshake[0], camera.handshake[1], environment)
                 if best_match is not None:
                     c = camera
-                    environment.tracked_object = best_match
+                    tracked_object_id = best_match.id
                     break
     
     utils.reset_handshakes(environment.cameras)
-    tracked_pos = environment.tracked_object.pos
-    tracked_visual = utils.get_object_appearance(c, environment.tracked_object, environment)
+    tracked_pos = environment.objects[tracked_object_id].pos
+    tracked_visual = utils.get_object_appearance(c, environment.objects[tracked_object_id], environment)
     for camera in environment.cameras:
-        if c.id != camera.id and utils.can_camera_see_object(camera, environment.tracked_object, environment):
-            if utils.can_camera_see_object(camera, environment.tracked_object, environment):
-                utils.send_handshake(c, camera, environment.tracked_object, environment)
-    environment.update(window, c.id)
+        if c.id != camera.id and utils.can_camera_see_object(camera, environment.objects[tracked_object_id], environment):
+            if utils.can_camera_see_object(camera, environment.objects[tracked_object_id], environment):
+                utils.send_handshake(c, camera, environment.objects[tracked_object_id], environment)
+    environment.update(window, c.id, tracked_object_id)
     pygame.display.flip()
     clock.tick(20)
     progress = False
