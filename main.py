@@ -51,13 +51,13 @@ while True:
                     break
     
     utils.reset_handshakes(environment.cameras)
+    environment.update(window, c.id, tracked_object_id)
     tracked_pos = environment.objects[tracked_object_id].pos
     tracked_visual = utils.get_object_appearance(c, environment.objects[tracked_object_id], environment)
     for camera in environment.cameras:
         if c.id != camera.id and utils.can_camera_see_object(camera, environment.objects[tracked_object_id], environment):
-            if utils.can_camera_see_object(camera, environment.objects[tracked_object_id], environment):
-                utils.send_handshake(c, camera, environment.objects[tracked_object_id], environment)
-    environment.update(window, c.id, tracked_object_id)
+            utils.send_handshake(c, camera, environment.objects[tracked_object_id], environment)
+    environment.update_handshake_visual(window, c.id)
     pygame.display.flip()
     clock.tick(constants.FPS)
     progress = False

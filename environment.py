@@ -107,6 +107,35 @@ class Environment:
             self.cameras.append(Camera(cameras_processed, x,y))
             cameras_processed += 1
             
+    def update_handshake_visual(self, screen, tracking_camera_id):
+        for camera in self.cameras:
+            if camera.id == tracking_camera_id:
+                color = (255, 0, 0)
+            elif camera.handshake is not None:
+                color = (255, 165, 0)
+            else:
+                color = (0, 255, 0)
+            pygame.draw.circle(screen, 
+                color, 
+                (int((camera.x + 0.5) * constants.SCALE), int((camera.y + 0.5) * constants.SCALE)),
+                max(int(constants.SCALE / 2), 3)
+            )
+            if camera.handshake is not None:
+                x,y = camera.handshake[0]
+                pygame.draw.circle(screen, 
+                    (255, 255, 0), 
+                    (int(x * constants.SCALE), int(y * constants.SCALE)),
+                    max(int(constants.SCALE / 2), 5)
+                )
+        for camera in self.cameras:
+            if camera.handshake is not None:
+                x,y = camera.handshake[0]
+                pygame.draw.circle(screen, 
+                    (255, 255, 0), 
+                    (int(x * constants.SCALE), int(y * constants.SCALE)),
+                    max(int(constants.SCALE / 2), 5)
+                )
+
     def update(self, screen, tracking_camera_id, tracking_object_id):
         screen.fill((255, 255, 255))
         for y in range(self.map.shape[0]):
@@ -123,18 +152,7 @@ class Environment:
                         (255, 114, 118),
                         (x*constants.SCALE, y*constants.SCALE, constants.SCALE, constants.SCALE)
                     )
-        for camera in self.cameras:
-            if camera.id == tracking_camera_id:
-                color = (255, 0, 0)
-            elif camera.handshake is not None:
-                color = (255, 165, 0)
-            else:
-                color = (0, 255, 0)
-            pygame.draw.circle(screen, 
-                color, 
-                (int((camera.x + 0.5) * constants.SCALE), int((camera.y + 0.5) * constants.SCALE)),
-                max(int(constants.SCALE / 2), 3)
-            )
+
         for i in range(len(self.objects)):
             if i == 0:
                 self.objects[i].update(screen, True, False)
@@ -142,4 +160,3 @@ class Environment:
                 self.objects[i].update(screen, False, True)
             else:
                 self.objects[i].update(screen, False, False)
-            # add each position the object is in to an environment array
