@@ -126,6 +126,8 @@ class Environment:
         for camera in self.cameras:
             if camera.id == tracking_camera_id:
                 color = (255, 0, 0)
+            elif camera.handshake is not None:
+                color = (255, 165, 0)
             else:
                 color = (0, 255, 0)
             pygame.draw.circle(screen, 
@@ -140,3 +142,4 @@ class Environment:
                 self.objects[i].update(screen, False, True)
             else:
                 self.objects[i].update(screen, False, False)
+            # add each position the object is in to an environment array

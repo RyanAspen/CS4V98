@@ -59,7 +59,7 @@ while True:
                 utils.send_handshake(c, camera, environment.objects[tracked_object_id], environment)
     environment.update(window, c.id, tracked_object_id)
     pygame.display.flip()
-    clock.tick(20)
+    clock.tick(constants.FPS)
     progress = False
     while not progress:
         for event in pygame.event.get():

@@ -109,7 +109,7 @@ def initialize_vision_ranges(environment):
 
 def can_camera_see_position(camera, position):
     x, y = int(position[0]), int(position[1])
-    return camera.vision_range[x,y] == 1
+    return camera.vision_range[x,y] == 1 
 
 def can_camera_see_camera(camera1, camera2):
     c2x, c2y = camera2.pos
@@ -131,7 +131,7 @@ def can_camera_see_object(camera, object, environment):
 
 def send_handshake(sender, receiver, object, environment):
     appearance = get_object_appearance(sender, object, environment)
-    pos = object.pos
+    pos = guess_new_position(object)
     receiver.handshake = pos, appearance
 
 def reset_handshakes(cameras):
@@ -144,6 +144,26 @@ def find_object_with_handshake(camera, objects, environment):
         best_object = get_best_object_match(camera, objects, previous_pos, previous_appearance, environment)
         return best_object
     return None
+
+def guess_new_position(tracked_object):
+    if tracked_object.time_until_change == tracked_object.path[tracked_object.path_progress][2]:
+        last_path_x = tracked_object.path[tracked_object.path_progress - 1][0]
+        last_path_y = tracked_object.path[tracked_object.path_progress - 1][1]
+        speed = tracked_object.path[tracked_object.path_progress - 1][2]
+        prev_x = tracked_object.x - (tracked_object.x - last_path_x) / speed
+        prev_y = tracked_object.y - (tracked_object.y - last_path_y) / speed
+    else:
+        last_path_x = tracked_object.path[tracked_object.path_progress][0]
+        last_path_y = tracked_object.path[tracked_object.path_progress][1]
+        speed = tracked_object.path[tracked_object.path_progress][2]
+        prev_x = tracked_object.x - (tracked_object.x - last_path_x) / (speed - tracked_object.time_until_change)
+        prev_y = tracked_object.y - (tracked_object.y - last_path_y) / (speed - tracked_object.time_until_change)
+    prev_pos = prev_x, prev_y
+    curr_pos = tracked_object.pos
+    diff_x = (curr_pos[0] - prev_pos[0]) / tracked_object.path[tracked_object.path_progress - 1][2]
+    diff_y = (curr_pos[1] - prev_pos[1]) / tracked_object.path[tracked_object.path_progress - 1][2]
+    new_pos = (curr_pos[0] + diff_x), (curr_pos[1] + diff_y)
+    return new_pos
 
 def get_size_difference(camera, object1, target_appearance, environment):
     appearance1 = get_object_appearance(camera, object1, environment)
@@ -190,17 +210,24 @@ def get_appearance_difference(camera, object1, target_appearance, environment):
 
 def get_object_match(camera, object, target_pos, target_appearance, environment):
     # Use a function to calculate the match between the object and the camera
-    pos_diff = (target_pos[0] - object.pos[0])**2 + (target_pos[1] - object.pos[1])**2
+    pos_diff = abs(target_pos[0] - object.pos[0]) + abs(target_pos[1] - object.pos[1])
     appearance_diff = get_appearance_difference(camera, object, target_appearance, environment)
     size_diff = get_size_difference(camera, object, target_appearance, environment)
+    print("Target pos =", target_pos, "Object pos =", object.pos)
+    print("Pos Diff =", pos_diff, "Appearance Diff =", appearance_diff, "Size Diff =", size_diff)
     return pos_diff*constants.POS_CONST + appearance_diff*constants.APPEARANCE_CONST + size_diff*constants.SIZE_CONST
+
 
 def get_best_object_match(camera, objects, target_pos, target_appearance, environment):
     best_object = None
-    best_match = -1
+    best_match = 100000
+    print("-------------------")
     for object in objects:
         match = get_object_match(camera, object, target_pos, target_appearance, environment)
-        if match > best_match:
+        print("Total match for id ", object.id, "=", match)
+        if match < best_match:
             best_object = object
             best_match = match
+            print("New Best match =", best_object.id)
+    print("-------------------")
     return best_object
