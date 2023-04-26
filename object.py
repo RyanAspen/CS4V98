@@ -25,6 +25,7 @@ class Object:
         self.time_until_change = self.path[0][2]
         self.orientation = self.path[0][3]
         self.path_progress = 0
+        self.prev_pos = None
 
     def rotate(self, degrees): # Must be divisible by 90
         if degrees == 0:
@@ -58,6 +59,7 @@ class Object:
             self.orientation = orientation
 
     def update(self, screen, is_tracked, is_false_tracked):
+        self.prev_pos = self.pos
         self.progress_on_path()
         x_offset = int(self.x * constants.SCALE)
         y_offset = int(self.y * constants.SCALE)

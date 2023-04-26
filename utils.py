@@ -146,23 +146,11 @@ def find_object_with_handshake(camera, objects, environment):
     return None
 
 def guess_new_position(tracked_object):
-    if tracked_object.time_until_change == tracked_object.path[tracked_object.path_progress][2]:
-        last_path_x = tracked_object.path[tracked_object.path_progress - 1][0]
-        last_path_y = tracked_object.path[tracked_object.path_progress - 1][1]
-        speed = tracked_object.path[tracked_object.path_progress - 1][2]
-        prev_x = tracked_object.x - (tracked_object.x - last_path_x) / speed
-        prev_y = tracked_object.y - (tracked_object.y - last_path_y) / speed
-    else:
-        last_path_x = tracked_object.path[tracked_object.path_progress][0]
-        last_path_y = tracked_object.path[tracked_object.path_progress][1]
-        speed = tracked_object.path[tracked_object.path_progress][2]
-        prev_x = tracked_object.x - (tracked_object.x - last_path_x) / (speed - tracked_object.time_until_change)
-        prev_y = tracked_object.y - (tracked_object.y - last_path_y) / (speed - tracked_object.time_until_change)
-    prev_pos = prev_x, prev_y
-    curr_pos = tracked_object.pos
-    diff_x = (curr_pos[0] - prev_pos[0]) / tracked_object.path[tracked_object.path_progress - 1][2]
-    diff_y = (curr_pos[1] - prev_pos[1]) / tracked_object.path[tracked_object.path_progress - 1][2]
-    new_pos = (curr_pos[0] + diff_x), (curr_pos[1] + diff_y)
+    prev_x, prev_y = tracked_object.prev_pos
+    curr_x, curr_y = tracked_object.pos
+    diff_x = curr_x - prev_x
+    diff_y = curr_y - prev_y 
+    new_pos = (curr_x + diff_x), (curr_y + diff_y)
     return new_pos
 
 def get_size_difference(camera, object1, target_appearance, environment):
