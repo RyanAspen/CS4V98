@@ -1,17 +1,17 @@
 """
 
-Class to describe a object. It consists of the following fields:
-- Id
-- Position
-- Visual Properties (For 2D, we treat the object as some set of pixels with particular colors)
-- Path and Rotations 
+An object is a physical body that moves through a pre-planned trajectory in an
+environment. It consists of the full 2d representation of the object's appearance (2d array of pseudo-greyscale)
+and a list of positions, orientations, and times between new positions, which the object passes
+through over the course of a simulation.
 
-The object should have functions to move and rotate. 
+
+
 """
 
+import constants
 import numpy as np
 import pygame
-import constants
 
 class Object:
 
@@ -20,14 +20,24 @@ class Object:
         self.rotation = 0
         self.size = self.width, self.height = visual.shape
         self.visual = visual
-        self.path = path # List of tuples (newX, newY, time, orientation)
-        self.pos = self.x, self.y = float(self.path[0][0]), float(self.path[0][1]) # Based on map coords, not real coords
+        self.path = path 
+        self.pos = self.x, self.y = float(self.path[0][0]), float(self.path[0][1]) 
         self.time_until_change = self.path[0][2]
         self.orientation = self.path[0][3]
         self.path_progress = 0
         self.prev_pos = None
 
-    def rotate(self, degrees): # Must be divisible by 90
+
+    """
+    
+    Inputs:
+    - degrees -> number of degrees to rotate the object relative to its original position (must be 0, 90, 180, or 270)
+
+    Output:
+    - A 2D array describing the object's appearance after being rotated the specified number of degrees
+
+    """
+    def rotate(self, degrees): 
         if degrees == 0:
             return self.visual
         elif degrees == 90:
@@ -39,6 +49,20 @@ class Object:
         else:
             return None
 
+
+    """
+    
+    Inputs:
+    - N/A
+
+    Output:
+    - N/A
+
+    Description:
+    This function updates the object's position and orientation according to its
+    current progress on its pre-defined path.
+
+    """
     def progress_on_path(self):
         if self.path_progress == len(self.path) - 1:
             return
@@ -58,6 +82,23 @@ class Object:
             self.time_until_change -= 1
             self.orientation = orientation
 
+    """
+    
+    Inputs:
+    - screen -> The Pygame window used for display
+    - is_tracked -> True if the object is being correctly tracked by the camera
+    - is_false_tracked -> True if the object is being incorrectly tracked by the camera
+
+    Output:
+    - N/A
+
+    Description:
+    This function updates the object's position and orientation according to its current
+    progress on its pre-defined path, then updates screen with the object's new state. An
+    object gets a blue outline if it is being correctly tracked by the camera. An object
+    gets a purple outline if it is being incorrectly tracked by the camera.
+
+    """
     def update(self, screen, is_tracked, is_false_tracked):
         self.prev_pos = self.pos
         self.progress_on_path()

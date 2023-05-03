@@ -1,13 +1,11 @@
 """
 
-Class to describe a camera. It consists of the following fields:
-- Id
-- Position
-- Vision Range
+A camera is defined by a point within an environment that can used to detect objects
+within a defined vision range. Depending on the situation, a camera may either have an
+empty handshake (None) or a non-empty handshake (tuple of x,y position and object appearance).
 
-A camera should have functions to initialize vision ranges from an environment,
-determine whether a particular object is visible, get a visible object's position (for depth cameras),
-get a visible object's visual appearance, etc.
+Cameras are initialized with load_from_file() in environment.py and initialize_vision_ranges()
+in utils.py.
 
 """
 
@@ -17,7 +15,7 @@ class Camera:
         self.id = id
         self.pos = self.x, self.y = x, y
         self.vision_range = None
-        self.handshake = None # tuple of pos and 1d view 
+        self.handshake = None 
         
         
 

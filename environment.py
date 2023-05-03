@@ -1,21 +1,20 @@
 """
 
-Class to describe an environment. It consists of the following fields:
-- Size
-- Obstacles / Walls
-- Objects
-- Cameras
+An environment is a full description of a 2D map in which the simulation
+is ran. It consists of a binary 2D array describing where opaque, unmoving walls
+are in the map, a list of camera positions, and a list of objects moving through
+the environment.
 
-The environment should have an updateFrame function, which updates every object after some time has passed, 
-as well as some loadEnvironment function which loads in a file used to initialize.
+Because environments are complex, they should be initialized with the load_from_file()
+function. The load_from_file() function parses the map file defined by MAP_NAME (see 
+environment_format.txt to understand the format of the map file).
+
 """
 
+import constants
 import numpy as np
-import os
 import pygame
 from camera import Camera
-import constants
-
 from object import Object
 
 class Environment:
@@ -29,55 +28,34 @@ class Environment:
             # Load from file (should always be this case)
             self.load_from_file(file_name)
 
-    def save_to_file(self, file_name):
-        map_file_path = "maps/" + file_name
-        if os.path.exists(map_file_path):
-            os.remove(map_file_path)
-        f = open(map_file_path, "x")
-        f.write(str(self.width) + " " + str(self.height) + "\n")
-        for y in range(self.height):
-            s = ""
-            for x in range(self.width):
-                s += str(int(self.map[x][y])) + " "
-            f.write(s + "\n")
-        f.write(str(len(self.objects)) + "\n")
-        for object in self.objects:
-            # Requires 2d array for visual representation and path. First object is tracked
-            f.write(str(object.width) + " " + str(object.height))
-            for y in range(object.height):
-                s = ""
-                for x in range(object.width):
-                    s += str(int(self.initial_visual[x,y])) + " "
-                f.write(s + "\n")
-            f.write(str(len(object.initial_path)) + "\n")
-            for x, y, speed, orientation in object.initial_path:
-                f.write(str(x) + " " + str(y) + " " + str(speed) + " " + str(orientation))
+    
+    """
+    
+    Inputs:
+    - file_name -> string of a file within the maps folder
 
-        f.write(str(len(self.cameras)) + "\n")
-        for camera in self.cameras:
-            # Just requires position
-            f.write(str(camera.x) + " " + str(camera.y) + "\n")
-        f.close()
+    Output:
+    - N/A
 
-    #TODO
+    Description:
+    This function reads the file described by file_name and
+    initializes this environment using the parsed information.
+
+    """
     def load_from_file(self, file_name):
         map_file_path = "maps/" + file_name
         f = open(map_file_path, "r")
         content = f.readlines()
-        # Map Dimensions
         self.size = self.height, self.width = np.array(content[0].split()).astype(int)
         self.map = np.zeros(self.size)
-        # Map Details
         i = 0
         for line in content[1:self.height + 1]:
             self.map[i] = np.array(line.split())
             i += 1
-        # Objects
         i = self.height + 1
         self.objects = list()
         objects_length = int(content[i])
         i += 1
-
         objects_processed = 0
         while objects_processed < objects_length:
             object_width, object_height = np.array(content[i].split()).astype(int)
@@ -107,6 +85,28 @@ class Environment:
             self.cameras.append(Camera(cameras_processed, x,y))
             cameras_processed += 1
             
+    """
+    
+    Inputs:
+    - screen -> The Pygame window used for display
+    - tracking_camera_id -> The id of the camera currently in charge of
+    tracking the relevant object
+    
+    Output:
+    - N/A
+
+    Description:
+    This function updates screen with visuals of the environment's cameras depending
+    on the cameras' handshakes. Cameras have the following colors:
+    - red -> the camera currently tracking the object (overrides yellow and green)
+    - yellow -> any camera that has a non-empty handshake
+    - green -> any camera that has an empty handshake
+
+    This function also draws a yellow dot on screen describing where the tracked object's
+    position is predicted to move to next frame. The yellow dot only appears if handshakes are
+    being generated.
+
+    """
     def update_handshake_visual(self, screen, tracking_camera_id):
         for camera in self.cameras:
             if camera.id == tracking_camera_id:
@@ -136,6 +136,27 @@ class Environment:
                     max(int(constants.SCALE / 2), 5)
                 )
 
+    """
+    
+    Inputs:
+    - screen -> The Pygame window used for display
+    - tracking_camera_id -> The id of the camera currently in charge of
+    tracking the relevant object
+    - tracking_object_id -> The id of the object currently being tracked
+    
+    Output:
+    - N/A
+
+    Description:
+    This function progresses the simulation forward by a frame, then it updates 
+    screen with visuals describing the state of the map and the environment's objects. 
+    The visual colors are as follows:
+    - Black -> opaque wall
+    - Pink -> visual range of the current tracking camera
+    - Blue Outline -> correct object to be tracked
+    - Purple Outline -> object currently being tracked (only present if different from correct object to be tracked)
+
+    """
     def update(self, screen, tracking_camera_id, tracking_object_id):
         screen.fill((255, 255, 255))
         for y in range(self.map.shape[0]):

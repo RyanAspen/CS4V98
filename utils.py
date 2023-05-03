@@ -1,22 +1,32 @@
 """
 
-Utility methods used by other objects.
+This file contains utility methods used elsewhere in the code.
 
 """
 
-import numpy as np
-from queue import Queue
 import constants
 import copy
+import numpy as np
+from queue import Queue
 
+
+"""
+    
+Inputs:
+- start -> starting position as a 2-tuple of (x,y)
+- end -> ending position as a 2-tuple of (x,y)
+- environment -> the environment containing the start and end positions
+
+Output:
+- Boolean value indicating whether start is visible from end (whether there are any opaque tiles between the start and end positions)
+
+Description:
+This function determines whether a camera positioned at start can see end. It is a modified version of Bresenham's Line Algorithm, except
+that it checks every tile marked by the algorithm to see if it is a wall or not.
+
+"""
 def is_pos_visible_from_pos(start, end, environment):
-    """
-        Draw a line between start and end
-        For every position that that line passes through, check if it is a wall. If it is, return false.
-        Return true.
-    """
 
-    # Using Bresenham's Line Algorithm
     x0, y0 = start
     x1, y1 = end
 
@@ -71,6 +81,21 @@ def is_pos_visible_from_pos(start, end, environment):
         else:
             return plotLineHigh(x0, y0, x1, y1)
 
+
+"""
+    
+Inputs:
+- environment -> the environment containing the start and end positions
+
+Output:
+- N/A
+
+Description:
+This function updates the vision ranges of every camera within environment. It uses is_pos_visible_from_pos along with a
+Breadth-First Search approach to only test tiles that could feasibly be visible from the camera's position.
+
+"""
+
 def initialize_vision_ranges(environment):
 
     def is_pos_on_map(pos, environment):
@@ -105,18 +130,21 @@ def initialize_vision_ranges(environment):
                 else:
                     camera.vision_range[curr_y, curr_x] = 2
                 
-        
+"""
+    
+Inputs:
+- camera -> a camera
+- object -> an object
+- environment -> the environment containing camera and object
 
-def can_camera_see_position(camera, position):
-    x, y = int(position[0]), int(position[1])
-    return camera.vision_range[x,y] == 1 
+Output:
+- 2D array describing the object's visual appearance from the camera's point of view
 
-def can_camera_see_camera(camera1, camera2):
-    c2x, c2y = camera2.pos
-    return camera1.vision_range[c2x, c2y] == 1
+Description:
+This function takes the object's true visual appearance and removes (override to 0) all pixels that aren't visible to the camera
 
+"""
 def get_object_appearance(camera, object, environment):
-    # Return an array representing the appearance of the object except every pixel that isn't visible is overridden with 0
     cx, cy = int(object.pos[0]), int(object.pos[1])
     appearance = copy.deepcopy(object.visual)
     for x in range(cx, cx + object.width):
@@ -126,18 +154,75 @@ def get_object_appearance(camera, object, environment):
                 appearance[cx - x, cy - y] = 0
     return appearance
 
+"""
+    
+Inputs:
+- camera -> a camera
+- object -> an object
+- environment -> the environment containing camera and object
+
+Output:
+- Boolean value indicating whether camera can see any part of the object
+
+Description:
+This function makes use get_object_appearance and checks if the output has any nonzero value.
+
+"""
 def can_camera_see_object(camera, object, environment):
     return not np.all((get_object_appearance(camera, object, environment) == 0))
 
+"""
+    
+Inputs:
+- sender -> the camera sending the handshake
+- receiver -> the camera receiving the handshake
+- object -> an object
+- environment -> the environment containing the cameras and object
+
+Output:
+- N/A
+
+Description:
+This function creates a handshake given sender's view of object to reciever.
+
+"""
 def send_handshake(sender, receiver, object, environment):
     appearance = get_object_appearance(sender, object, environment)
     pos = guess_new_position(object)
     receiver.handshake = pos, appearance
 
+"""
+    
+Inputs:
+- cameras -> a list of all cameras in the environment
+
+Output:
+- N/A
+
+Description:
+This function sets all cameras to have an empty handshake. This is called to make sure
+that cameras don't use outdated handshakes.
+
+"""
 def reset_handshakes(cameras):
     for camera in cameras:
         camera.handshake = None
 
+"""
+    
+Inputs:
+- camera -> a camera
+- objects -> a list of all objects in the environment
+- environment -> the environment containing the camera and objects
+
+Output:
+- The object that matches best with the camera's handshake. The output is None if no object is visible to camera
+or the camera has an empty handshake.
+
+Description:
+This function takes the camera's handshake and uses get_best_object_match() to get the object that best matches it.
+
+"""
 def find_object_with_handshake(camera, objects, environment):
     if camera.handshake is not None:
         previous_pos, previous_appearance = camera.handshake
@@ -145,6 +230,15 @@ def find_object_with_handshake(camera, objects, environment):
         return best_object
     return None
 
+"""
+    
+Inputs:
+- tracked_object -> an object
+
+Output:
+- A 2-tuple of (x,y) describing the most likely position of the tracked_object in the next frame
+
+"""
 def guess_new_position(tracked_object):
     prev_x, prev_y = tracked_object.prev_pos
     curr_x, curr_y = tracked_object.pos
@@ -153,6 +247,18 @@ def guess_new_position(tracked_object):
     new_pos = (curr_x + diff_x), (curr_y + diff_y)
     return new_pos
 
+"""
+    
+Inputs:
+- camera -> a camera
+- object1 -> the object to compare against the handshake
+- target_appearance -> the appearance derived from the handshake
+- environment -> the environment containing the camera and objects
+
+Output:
+- A value corresponding to the difference in size of the bounding boxes around the two objects
+
+"""
 def get_size_difference(camera, object1, target_appearance, environment):
     appearance1 = get_object_appearance(camera, object1, environment)
     appearance2 = target_appearance
@@ -175,6 +281,18 @@ def get_size_difference(camera, object1, target_appearance, environment):
     width = appearance1.shape[1] - extra_columns
     return abs(height - appearance2.shape[0]) + abs(width - appearance2.shape[1])
 
+"""
+    
+Inputs:
+- camera -> a camera
+- object1 -> the object to compare against the handshake
+- target_appearance -> the appearance derived from the handshake
+- environment -> the environment containing the camera and objects
+
+Output:
+- A value corresponding to the normalized pixel difference of the appearances around the two objects
+
+"""
 def get_appearance_difference(camera, object1, target_appearance, environment):
     appearance1 = get_object_appearance(camera, object1, environment)
     appearance2 = target_appearance
@@ -196,26 +314,60 @@ def get_appearance_difference(camera, object1, target_appearance, environment):
 
     return normalized_sum
 
-def get_object_match(camera, object, target_pos, target_appearance, environment):
-    # Use a function to calculate the match between the object and the camera
+"""
+    
+Inputs:
+- camera -> a camera
+- object -> the object to compare against the handshake
+- target_pos -> the position derived from the handshake
+- target_appearance -> the appearance derived from the handshake
+- environment -> the environment containing the camera and objects
+- verbose -> if True, print out difference values
+
+Output:
+- A value corresponding to the difference between the given object and handshake.
+
+Description:
+The value returned by this algorithm is the weighted average of the position difference, appearance difference,
+and size difference as determined by POS_CONST, APPEARANCE_CONST, and SIZE_CONST.
+
+"""
+def get_object_match(camera, object, target_pos, target_appearance, environment, verbose = True):
     pos_diff = abs(target_pos[0] - object.pos[0]) + abs(target_pos[1] - object.pos[1])
     appearance_diff = get_appearance_difference(camera, object, target_appearance, environment)
     size_diff = get_size_difference(camera, object, target_appearance, environment)
-    print("Target pos =", target_pos, "Object pos =", object.pos)
-    print("Pos Diff =", pos_diff, "Appearance Diff =", appearance_diff, "Size Diff =", size_diff)
+    if verbose:
+        print("Pos Diff =", pos_diff, "Appearance Diff =", appearance_diff, "Size Diff =", size_diff)
     return pos_diff*constants.POS_CONST + appearance_diff*constants.APPEARANCE_CONST + size_diff*constants.SIZE_CONST
 
+"""
+    
+Inputs:
+- camera -> a camera
+- objects -> the object to compare against the handshake
+- target_pos -> the position derived from the handshake
+- target_appearance -> the appearance derived from the handshake
+- environment -> the environment containing the camera and objects
+- verbose -> if True, print out difference values
 
-def get_best_object_match(camera, objects, target_pos, target_appearance, environment):
+Output:
+- The object that has the least difference with the handshake object
+
+"""
+def get_best_object_match(camera, objects, target_pos, target_appearance, environment, verbose = True):
     best_object = None
     best_match = 100000
-    print("-------------------")
+    if verbose:
+        print("-------------------")
     for object in objects:
-        match = get_object_match(camera, object, target_pos, target_appearance, environment)
-        print("Total match for id ", object.id, "=", match)
+        match = get_object_match(camera, object, target_pos, target_appearance, environment, verbose)
+        if verbose:
+           print("Total match for id ", object.id, "=", match)
         if match < best_match:
             best_object = object
             best_match = match
-            print("New Best match =", best_object.id)
-    print("-------------------")
+            if verbose:
+                print("New Best match =", best_object.id)
+    if verbose:
+        print("-------------------")
     return best_object
