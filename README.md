@@ -1,0 +1,1 @@
+To create a PyGame simulation, run main.py after setting appropriate parameters in constants.py.
